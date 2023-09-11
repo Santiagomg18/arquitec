@@ -66,3 +66,6 @@ while True:
     controlar_leds_joystick(posicion_joystick)
 
     utime.sleep(1) 
+
+
+que hizo perro
