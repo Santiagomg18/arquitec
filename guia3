@@ -1,73 +1,112 @@
-import machine 
-import utime
+from machine import Pin, ADC, PWM
+import time
 
+joystick_horz = ADC(Pin(32))
+joystick_vert = ADC(Pin(33))
 
-led_rgb = machine.Pin(0, machine.Pin.OUT)  
-joystick_x = machine.ADC(machine.Pin(32))  
-temperatura_pin = machine.ADC(machine.Pin(34))  
-temperatura_pin.atten(machine.ADC.ATTN_11DB) 
+sensor = ADC(Pin(35))
 
-leds_rojos = [
-    machine.Pin(3, machine.Pin.OUT),  
-    machine.Pin(4, machine.Pin.OUT),  
-    machine.Pin(2, machine.Pin.OUT),  
-    machine.Pin(15, machine.Pin.OUT)  
+led_derecha = PWM(Pin(15), freq=1000)
+led_izquierda = PWM(Pin(2), freq=1000)
+led_abajo = PWM(Pin(4), freq=1000)
+led_arriba = PWM(Pin(5), freq=1000)
+
+patita_R = PWM(Pin(19), freq=1000)
+patita_G = PWM(Pin(21), freq=1000)
+patita_B = PWM(Pin(22), freq=1000)
+
+buzzer = PWM(Pin(23), freq=440, duty=0)  
+
+melodia_mario = [
+    ("E7", 150), ("E7", 150), ("0", 150), ("E7", 150),
+    ("0", 150), ("C7", 150), ("E7", 150), ("0", 150),
+    ("G7", 150), ("0", 150), ("0", 150), ("0", 150),
+    ("G6", 150), ("0", 150), ("0", 150), ("0", 150),
+    ("C7", 150), ("0", 150), ("0", 150), ("G6", 150),
+    ("0", 150), ("0", 150), ("E6", 150), ("0", 150),
+    ("0", 150), ("A6", 150), ("0", 150), ("B6", 150),
+    ("0", 150), ("AS6", 150), ("A6", 150), ("0", 150),
+    ("G6", 150), ("E7", 150), ("G7", 150), ("A7", 150),
+    ("0", 150), ("F7", 150), ("G7", 150), ("0", 150),
+    ("E7", 150), ("0", 150), ("C7", 150), ("D7", 150),
+    ("B6", 150), ("0", 150), ("0", 150), ("0", 150),
+    ("C7", 150), ("0", 150), ("0", 150), ("G6", 150),
+    ("0", 150), ("0", 150), ("E6", 150), ("0", 150),
+    ("0", 150), ("A6", 150), ("0", 150), ("B6", 150),
+    ("0", 150), ("AS6", 150), ("A6", 150), ("0", 150)
 ]
 
 
-def leer_temperatura():
-    raw_value = temperatura_pin.read()
-    
-    voltage = raw_value / 4095 * 3.3
-    temperatura = (voltage - 0.5) * 100
-    return temperatura
+frecuencias = {
+    "B0": 31, "C1": 33, "CS1": 35, "D1": 37, "DS1": 39, "E1": 41, "F1": 44, "FS1": 46, "G1": 49, "GS1": 52, "A1": 55, "AS1": 58, "B1": 62,
+    "C2": 65, "CS2": 69, "D2": 73, "DS2": 78, "E2": 82, "F2": 87, "FS2": 93, "G2": 98, "GS2": 104, "A2": 110, "AS2": 117, "B2": 123,
+    "C3": 131, "CS3": 139, "D3": 147, "DS3": 156, "E3": 165, "F3": 175, "FS3": 185, "G3": 196, "GS3": 208, "A3": 220, "AS3": 233, "B3": 247,
+    "C4": 262, "CS4": 277, "D4": 294, "DS4": 311, "E4": 330, "F4": 349, "FS4": 370, "G4": 392, "GS4": 415, "A4": 440, "AS4": 466, "B4": 494,
+    "C5": 523, "CS5": 554, "D5": 587, "DS5": 622, "E5": 659, "F5": 698, "FS5": 740, "G5": 784, "GS5": 831, "A5": 880, "AS5": 932, "B5": 988,
+    "C6": 1047, "CS6": 1109, "D6": 1175, "DS6": 1245, "E6": 1319, "F6": 1397, "FS6": 1480, "G6": 1568, "GS6": 1661, "A6": 1760, "AS6": 1865, "B6": 1976,
+    "C7": 2093, "CS7": 2217, "D7": 2349, "DS7": 2489, "E7": 2637, "F7": 2794, "FS7": 2960, "G7": 3136, "GS7": 3322, "A7": 3520, "AS7": 3729, "B7": 3951,
+    "C8": 4186, "CS8": 4435, "D8": 4699, "DS8": 4978
+}
 
 
-def controlar_led_rgb(color):
-    led_rgb.value(1)  
-    if color == "azul":
-        led_rgb.duty(0)  
-    elif color == "verde":
-        led_rgb.duty(1023)  
-    elif color == "rojo":
-        led_rgb.duty(0) 
+def reproducir_nota(nota, duracion):
+    if nota == "0":
+        time.sleep_ms(duracion)
+    else:
+        frecuencia = frecuencias[nota]
+        buzzer.freq(frecuencia)
+        buzzer.duty(512)  
+        time.sleep_ms(duracion)
+        buzzer.duty(0)  
 
 
-def controlar_leds_rojos(estado):
-    for led in leds_rojos:
-        led.value(estado)
-
-
-def controlar_leds_joystick(posicion):
-    rango_leds = [1023, 2047, 3071, 4095]
-
-    for i, led in enumerate(leds_rojos):
-        if posicion <= rango_leds[i]:
-            led.value(1) 
-        else:
-            led.value(0)  
+def reproducir_melodia(melodia):
+    for nota, duracion in melodia:
+        reproducir_nota(nota, duracion)
+        time.sleep_ms(50)  
 
 while True:
-    temperatura = leer_temperatura()
-    posicion_joystick = joystick_x.read()  
+    x = joystick_horz.read()
 
-        if temperatura < 0:
-        controlar_led_rgb("azul")
-   
-    elif temperatura <= 35:
-        controlar_led_rgb("verde")
     
+    y = joystick_vert.read()
+
+
+    if x < 2000:
+        led_izquierda.duty(1023)
+    elif x > 3000:
+        led_derecha.duty(1023)
     else:
-        controlar_led_rgb("rojo")
-        controlar_leds_rojos(1)  
+        led_derecha.duty(0)
+        led_izquierda.duty(0)
 
-   
-    controlar_leds_joystick(posicion_joystick)
+    if y < 2000:
+        led_abajo.duty(1023)
+    elif y > 3000:
+        led_arriba.duty(1023)
+    else:
+        led_abajo.duty(0)
+        led_arriba.duty(0)
 
-    utime.sleep(1) 
+
+    temperatura = sensor.read()
+    
+
+    print("Temperatura:", temperatura)
 
 
-//agregar 2parte y core
+    if temperatura < 1582:
+        patita_R.duty(1023)
+        patita_G.duty(0)
+        patita_B.duty(0)
+    elif temperatura < 3168:
+        patita_R.duty(0)
+        patita_G.duty(1023)
+        patita_B.duty(0)
+    else:
+        patita_R.duty(0)
+        patita_G.duty(0)
+        patita_B.duty(1023)
 
-
-
+    if temperatura > 3500:  
+        reproducir_melodia(melodia_mario)
