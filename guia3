@@ -1,0 +1,68 @@
+import machine 
+import utime
+
+
+led_rgb = machine.Pin(0, machine.Pin.OUT)  
+joystick_x = machine.ADC(machine.Pin(32))  
+temperatura_pin = machine.ADC(machine.Pin(34))  
+temperatura_pin.atten(machine.ADC.ATTN_11DB) 
+
+leds_rojos = [
+    machine.Pin(3, machine.Pin.OUT),  
+    machine.Pin(4, machine.Pin.OUT),  
+    machine.Pin(2, machine.Pin.OUT),  
+    machine.Pin(15, machine.Pin.OUT)  
+]
+
+
+def leer_temperatura():
+    raw_value = temperatura_pin.read()
+    
+    voltage = raw_value / 4095 * 3.3
+    temperatura = (voltage - 0.5) * 100
+    return temperatura
+
+
+def controlar_led_rgb(color):
+    led_rgb.value(1)  
+    if color == "azul":
+        led_rgb.duty(0)  
+    elif color == "verde":
+        led_rgb.duty(1023)  
+    elif color == "rojo":
+        led_rgb.duty(0) 
+
+
+def controlar_leds_rojos(estado):
+    for led in leds_rojos:
+        led.value(estado)
+
+
+def controlar_leds_joystick(posicion):
+    rango_leds = [1023, 2047, 3071, 4095]
+
+    for i, led in enumerate(leds_rojos):
+        if posicion <= rango_leds[i]:
+            led.value(1) 
+        else:
+            led.value(0)  
+
+while True:
+    temperatura = leer_temperatura()
+    posicion_joystick = joystick_x.read()  
+
+    
+    if temperatura < 0:
+        controlar_led_rgb("azul")
+   
+    elif temperatura <= 35:
+        controlar_led_rgb("verde")
+    
+    else:
+        controlar_led_rgb("rojo")
+        controlar_leds_rojos(1)  
+
+   
+    controlar_leds_joystick(posicion_joystick)
+
+    utime.sleep(1) 
